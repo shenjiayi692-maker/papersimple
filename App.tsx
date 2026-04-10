@@ -8,10 +8,12 @@ import React, { useState, useEffect } from 'react';
 import { HeroScene, QuantumComputerScene } from './components/QuantumScene';
 import { SurfaceCodeDiagram, TransformerDecoderDiagram, PerformanceMetricDiagram } from './components/Diagrams';
 import { ArrowDown, Menu, X, BookOpen, Plus } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ArticleGenerator } from './components/ArticleGenerator';
 import { GeneratedArticle } from './components/GeneratedArticle';
 import { ArticleData, Language } from './types';
+import { generateArticleFromSummary } from './services/geminiService';
+import { Loader2 } from 'lucide-react';
 
 const TRANSLATIONS = {
   en: {
@@ -37,7 +39,18 @@ const TRANSLATIONS = {
     step2Desc: 'The engine automatically suggests the best interactive diagrams to represent complex data.',
     step3Title: 'Elegant Rendering',
     step3Desc: 'A bespoke, high-end editorial website is generated, ready for sharing with the world.',
-    rights: 'All rights reserved.'
+    rights: 'All rights reserved.',
+    chemistry: 'Chemistry',
+    material: 'Material',
+    biology: 'Biology',
+    ai: 'AI',
+    weavingSteps: [
+      'Analyzing research abstract...',
+      'Identifying key methodologies...',
+      'Synthesizing results and data...',
+      'Mapping interactive visualizations...',
+      'Rendering editorial layout...'
+    ]
   },
   zh: {
     engine: '简报',
@@ -62,7 +75,18 @@ const TRANSLATIONS = {
     step2Desc: '引擎自动建议最佳的交互式图表来表示复杂的数据。',
     step3Title: '优雅呈现',
     step3Desc: '生成定制的高端编辑网站，随时可以与世界分享。',
-    rights: '版权所有。'
+    rights: '版权所有。',
+    chemistry: '化学',
+    material: '材料',
+    biology: '生物',
+    ai: '人工智能',
+    weavingSteps: [
+      '正在分析研究摘要...',
+      '正在识别关键方法论...',
+      '正在综合结果与数据...',
+      '正在映射交互式可视化...',
+      '正在渲染编辑布局...'
+    ]
   }
 };
 
@@ -156,10 +180,81 @@ const ALPHA_QUBIT_DATA_ZH: ArticleData = {
   ]
 };
 
+const FEATURED_PAPERS = {
+  ai: [
+    {
+      id: 'alphaqubit',
+      title: 'AlphaQubit',
+      desc: { en: "Visualizing Google DeepMind's breakthrough in quantum error correction using recurrent transformers.", zh: "可视化 Google DeepMind 在使用循环 Transformer 进行量子纠错方面的突破。" },
+      date: 'Nature • Nov 2024',
+      tag: { en: 'Quantum AI', zh: '量子人工智能' },
+      data: { en: ALPHA_QUBIT_DATA_EN, zh: ALPHA_QUBIT_DATA_ZH }
+    },
+    {
+      id: 'regulatory-syntax',
+      title: 'Regulatory Syntax AI',
+      desc: { en: "Deep learning dissects regulatory syntax in human development across multiomics data.", zh: "深度学习在多组学数据中剖析人类发育中的调控语法。" },
+      date: 'Nature • Apr 2026',
+      tag: { en: 'Deep Learning', zh: '深度学习' }
+    }
+  ],
+  chemistry: [
+    {
+      id: 'bismuth-coupling',
+      title: 'Ambiphilic Bismuth Coupling',
+      desc: { en: "Ambiphilic cross-coupling with aryl-bismuth reagents enables new chemical transformations.", zh: "芳基铋试剂的亲两性交叉偶联实现了新的化学转化。" },
+      date: 'Nature • Apr 10, 2026',
+      tag: { en: 'Organic Chemistry', zh: '有机化学' }
+    },
+    {
+      id: 'alkene-alkyne',
+      title: 'Alkene to Alkyne Conversion',
+      desc: { en: "Direct conversion from alkenes to alkynes via proximity-enhanced H atom abstraction.", zh: "通过邻近增强的氢原子夺取实现从烯烃到炔烃的直接转化。" },
+      date: 'Nature • Apr 10, 2026',
+      tag: { en: 'Catalysis', zh: '催化' }
+    }
+  ],
+  material: [
+    {
+      id: 'nickelate-super',
+      title: 'Nickelate Superconductivity',
+      desc: { en: "Superconductivity and electronic structures of nickelate thin film superstructures.", zh: "镍酸盐薄膜超结构的超导性和电子结构。" },
+      date: 'Nature • Apr 10, 2026',
+      tag: { en: 'Superconductors', zh: '超导体' }
+    },
+    {
+      id: 'hfc-electrolytes',
+      title: 'HFC Electrolytes',
+      desc: { en: "Hydrofluorocarbon electrolytes for energy-dense and low-temperature batteries.", zh: "用于高能量密度和低温电池的氢氟烃电解质。" },
+      date: 'Nature • Apr 10, 2026',
+      tag: { en: 'Energy Storage', zh: '储能' }
+    }
+  ],
+  biology: [
+    {
+      id: 'dendritic-cells',
+      title: 'Dendritic Cell Therapy',
+      desc: { en: "Engineered immunosuppressive dendritic cells protect against cardiac remodelling.", zh: "工程化免疫抑制树突状细胞可防止心脏重塑。" },
+      date: 'Nature • Apr 10, 2026',
+      tag: { en: 'Immunotherapy', zh: '免疫疗法' }
+    },
+    {
+      id: 'maternal-fetal',
+      title: 'Maternal-Fetal Interface',
+      desc: { en: "Single-cell spatiotemporal dissection of the human maternal–fetal interface.", zh: "人类母胎界面的单细胞时空剖析。" },
+      date: 'Nature • Apr 10, 2026',
+      tag: { en: 'Developmental Bio', zh: '发育生物学' }
+    }
+  ]
+};
+
 const App: React.FC = () => {
   const [showGenerator, setShowGenerator] = useState(false);
   const [currentArticle, setCurrentArticle] = useState<ArticleData | null>(null);
   const [language, setLanguage] = useState<Language>('en');
+  const [isGeneratingFeatured, setIsGeneratingFeatured] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState(0);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
 
   const t = TRANSLATIONS[language];
 
@@ -167,6 +262,50 @@ const App: React.FC = () => {
     setCurrentArticle(data);
     setShowGenerator(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleFeaturedClick = async (paper: any) => {
+    if (paper.data) {
+      setCurrentArticle(language === 'zh' ? paper.data.zh : paper.data.en);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      setIsGeneratingFeatured(true);
+      setGenerationProgress(0);
+      setCurrentStepIndex(0);
+      
+      // Simulate progress
+      const progressInterval = setInterval(() => {
+        setGenerationProgress(prev => {
+          if (prev >= 95) return prev;
+          const next = prev + Math.random() * 5;
+          
+          // Update step index based on progress
+          const step = Math.floor((next / 100) * t.weavingSteps.length);
+          setCurrentStepIndex(Math.min(step, t.weavingSteps.length - 1));
+          
+          return next;
+        });
+      }, 800);
+
+      try {
+        const generatedData = await generateArticleFromSummary(
+          paper.title, 
+          paper.desc[language], 
+          language
+        );
+        clearInterval(progressInterval);
+        setGenerationProgress(100);
+        setTimeout(() => {
+          setCurrentArticle(generatedData);
+          setIsGeneratingFeatured(false);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }, 500);
+      } catch (error) {
+        clearInterval(progressInterval);
+        console.error("Failed to generate featured narrative:", error);
+        setIsGeneratingFeatured(false);
+      }
+    }
   };
 
   if (currentArticle) {
@@ -270,46 +409,61 @@ const App: React.FC = () => {
             <div className="h-px flex-1 bg-stone-100 mx-8 hidden md:block"></div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {/* AlphaQubit Example */}
-            <motion.div 
-              whileHover={{ y: -10 }}
-              className="group cursor-pointer bg-white rounded-2xl overflow-hidden border border-stone-200 shadow-sm hover:shadow-2xl transition-all duration-500"
-              onClick={() => setCurrentArticle(language === 'zh' ? ALPHA_QUBIT_DATA_ZH : ALPHA_QUBIT_DATA_EN)}
-            >
-              <div className="aspect-[4/3] bg-stone-900 relative overflow-hidden">
-                <div className="absolute inset-0 opacity-40 group-hover:opacity-60 transition-opacity">
-                  <HeroScene />
+          <div className="space-y-20">
+            {(Object.keys(FEATURED_PAPERS) as Array<keyof typeof FEATURED_PAPERS>).map((sector) => (
+              <div key={sector} className="space-y-8">
+                <div className="flex items-center gap-4">
+                  <h3 className="text-sm font-bold uppercase tracking-[0.3em] text-nobel-gold whitespace-nowrap">
+                    {t[sector]}
+                  </h3>
+                  <div className="h-px w-full bg-stone-100"></div>
                 </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-stone-900 via-transparent to-transparent"></div>
-                <div className="absolute bottom-6 left-6 right-6">
-                  <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-nobel-gold mb-2">{language === 'zh' ? '量子计算' : 'Quantum Computing'}</div>
-                  <h3 className="font-serif text-2xl text-white">AlphaQubit</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {FEATURED_PAPERS[sector].map((paper) => (
+                    <motion.div 
+                      key={paper.id}
+                      whileHover={{ y: -10 }}
+                      className="group cursor-pointer bg-white rounded-2xl overflow-hidden border border-stone-200 shadow-sm hover:shadow-2xl transition-all duration-500"
+                      onClick={() => handleFeaturedClick(paper)}
+                    >
+                      <div className="aspect-[4/3] bg-stone-900 relative overflow-hidden">
+                        <div className="absolute inset-0 opacity-40 group-hover:opacity-60 transition-opacity">
+                          <HeroScene />
+                        </div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-stone-900 via-transparent to-transparent"></div>
+                        <div className="absolute bottom-6 left-6 right-6">
+                          <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-nobel-gold mb-2">{paper.tag[language]}</div>
+                          <h3 className="font-serif text-2xl text-white">{paper.title}</h3>
+                        </div>
+                      </div>
+                      <div className="p-6">
+                        <p className="text-stone-600 text-sm leading-relaxed mb-6">
+                          {paper.desc[language]}
+                        </p>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-stone-400 uppercase tracking-widest">{paper.date}</span>
+                          <span className="text-nobel-gold font-bold text-xs uppercase tracking-widest group-hover:translate-x-1 transition-transform flex items-center gap-1">
+                            {t.viewNarrative} →
+                          </span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
                 </div>
               </div>
-              <div className="p-6">
-                <p className="text-stone-600 text-sm leading-relaxed mb-6">
-                  {language === 'zh' ? '可视化 Google DeepMind 在使用循环 Transformer 进行量子纠错方面的突破。' : "Visualizing Google DeepMind's breakthrough in quantum error correction using recurrent transformers."}
-                </p>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-stone-400 uppercase tracking-widest">{language === 'zh' ? 'Nature 2024年' : 'Nature 2024'}</span>
-                  <span className="text-nobel-gold font-bold text-xs uppercase tracking-widest group-hover:translate-x-1 transition-transform flex items-center gap-1">
-                    {t.viewNarrative} →
-                  </span>
-                </div>
-              </div>
-            </motion.div>
+            ))}
 
-            {/* Placeholder for more examples */}
-            <div className="bg-stone-50 rounded-2xl border border-dashed border-stone-200 flex flex-col items-center justify-center p-12 text-center">
-              <div className="w-16 h-16 bg-stone-100 rounded-full flex items-center justify-center text-stone-300 mb-4">
-                <Plus size={32} />
+            {/* Separate Upload Section */}
+            <div className="mt-20 bg-stone-50 rounded-[2rem] border border-dashed border-stone-200 flex flex-col items-center justify-center p-16 text-center">
+              <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center text-nobel-gold mb-6 shadow-sm border border-stone-100">
+                <Plus size={40} />
               </div>
-              <h3 className="font-serif text-xl text-stone-400 mb-2">{t.yourResearch}</h3>
-              <p className="text-stone-400 text-sm mb-6">{t.uploadDesc}</p>
+              <h3 className="font-serif text-3xl text-stone-900 mb-3">{t.yourResearch}</h3>
+              <p className="text-stone-500 text-lg mb-8 max-w-md mx-auto">{t.uploadDesc}</p>
               <button 
                 onClick={() => setShowGenerator(true)}
-                className="text-xs font-bold uppercase tracking-widest text-stone-500 hover:text-stone-900 transition-colors"
+                className="px-10 py-4 bg-stone-900 text-white rounded-xl font-bold uppercase tracking-widest text-sm hover:bg-stone-800 transition-all shadow-xl hover:-translate-y-1"
               >
                 {t.uploadNow}
               </button>
@@ -356,13 +510,79 @@ const App: React.FC = () => {
 
       <footer className="py-12 border-t border-stone-100">
         <div className="container mx-auto px-6 text-center">
-          <div className="flex items-center justify-center gap-4 mb-6">
+          <div className="flex items-center justify-center gap-4 mb-8">
             <div className="w-8 h-8 bg-nobel-gold rounded-full flex items-center justify-center text-white font-serif font-bold text-xl shadow-sm pb-1">α</div>
             <span className="font-serif font-bold text-lg tracking-wide text-stone-900">{language === 'zh' ? '论文简报' : 'PAPER SIMPLE'}</span>
           </div>
+          
+          <div className="mb-10">
+            <button 
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-stone-200 text-stone-500 hover:text-stone-900 hover:border-stone-900 transition-all text-xs font-bold uppercase tracking-widest"
+            >
+              <ArrowDown className="rotate-180" size={14} />
+              {language === 'zh' ? '返回顶部' : 'Back to Top'}
+            </button>
+          </div>
+
           <p className="text-stone-400 text-sm">© 2026 {language === 'zh' ? '论文简报' : 'Paper Simple'}. {t.rights}</p>
         </div>
       </footer>
+
+      {/* Generation Overlay */}
+      <AnimatePresence>
+        {isGeneratingFeatured && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-[#F9F8F4]/90 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center"
+          >
+            <div className="relative mb-12">
+              <div className="absolute inset-0 bg-nobel-gold/20 blur-3xl rounded-full animate-pulse"></div>
+              <div className="relative w-24 h-24 bg-white rounded-2xl shadow-2xl flex items-center justify-center border border-stone-100">
+                <Loader2 className="w-12 h-12 text-nobel-gold animate-spin" />
+              </div>
+            </div>
+            <h2 className="font-serif text-3xl text-stone-900 mb-4">
+              {language === 'zh' ? '正在编织研究叙事...' : 'Weaving Research Narrative...'}
+            </h2>
+            
+            <div className="w-full max-w-md mb-8">
+              <div className="flex justify-between items-end mb-2">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-nobel-gold animate-pulse">
+                  {t.weavingSteps[currentStepIndex]}
+                </span>
+                <span className="text-xs font-mono text-stone-400">{Math.round(generationProgress)}%</span>
+              </div>
+              <div className="h-1.5 w-full bg-stone-100 rounded-full overflow-hidden">
+                <motion.div 
+                  className="h-full bg-nobel-gold"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${generationProgress}%` }}
+                  transition={{ type: 'spring', bounce: 0, duration: 0.5 }}
+                />
+              </div>
+            </div>
+
+            <p className="text-stone-500 max-w-md font-light leading-relaxed">
+              {language === 'zh' 
+                ? 'Gemini 正在分析最新的研究成果，为您打造沉浸式的互动体验。' 
+                : 'Gemini is analyzing the latest research breakthroughs to craft an immersive interactive experience for you.'}
+            </p>
+            <div className="mt-12 flex gap-2">
+              {[0, 1, 2].map((i) => (
+                <motion.div
+                  key={i}
+                  animate={{ scale: [1, 1.5, 1], opacity: [0.3, 1, 0.3] }}
+                  transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.2 }}
+                  className="w-2 h-2 bg-nobel-gold rounded-full"
+                />
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

@@ -27,7 +27,8 @@ const TRANSLATIONS = {
     discover: 'DISCOVER',
     introduction: 'Introduction',
     figure: 'Figure',
-    generatedBy: 'Generated Narrative • Powered by Gemini'
+    generatedBy: 'Generated Narrative • Powered by Gemini',
+    home: 'Return to Home'
   },
   zh: {
     back: '返回库',
@@ -48,7 +49,8 @@ const TRANSLATIONS = {
     discover: '探索',
     introduction: '引言',
     figure: '图',
-    generatedBy: '生成的叙事 • 由 Gemini 提供支持'
+    generatedBy: '生成的叙事 • 由 Gemini 提供支持',
+    home: '返回首页'
   }
 };
 
@@ -391,7 +393,7 @@ export const GeneratedArticle: React.FC<GeneratedArticleProps> = ({ data, onBack
                 <h3 className="font-serif text-3xl text-stone-900 mb-4">{t.readyToShare}</h3>
                 <p className="text-stone-500 mb-10">{t.shareDesc}</p>
                 
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
                   <button 
                     onClick={handleExportPDF}
                     disabled={exporting}
@@ -409,6 +411,13 @@ export const GeneratedArticle: React.FC<GeneratedArticleProps> = ({ data, onBack
                     {t.saveImage}
                   </button>
                 </div>
+
+                <button 
+                  onClick={onBack}
+                  className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-stone-400 hover:text-stone-900 transition-all"
+                >
+                  <ChevronLeft size={14} /> {t.home}
+                </button>
               </div>
             </div>
           </section>
