@@ -21,15 +21,18 @@ const QuantumParticle = ({ position, color, scale = 1 }: { position: [number, nu
   });
 
   return (
-    <Sphere ref={ref} args={[1, 32, 32]} position={position} scale={scale}>
+    <Sphere ref={ref} args={[1, 64, 64]} position={position} scale={scale}>
       <MeshDistortMaterial
         color={color}
-        envMapIntensity={1}
+        envMapIntensity={2}
         clearcoat={1}
         clearcoatRoughness={0}
-        metalness={0.5}
+        metalness={0.7}
+        roughness={0.2}
         distort={0.4}
         speed={2}
+        emissive={color}
+        emissiveIntensity={0.2}
       />
     </Sphere>
   );
@@ -47,8 +50,15 @@ const MacroscopicWave = () => {
   });
 
   return (
-    <Torus ref={ref} args={[3, 0.1, 16, 100]} rotation={[Math.PI / 2, 0, 0]}>
-      <meshStandardMaterial color="#C5A059" emissive="#C5A059" emissiveIntensity={0.5} transparent opacity={0.6} wireframe />
+    <Torus ref={ref} args={[3, 0.05, 16, 128]} rotation={[Math.PI / 2, 0, 0]}>
+      <meshStandardMaterial 
+        color="#C5A059" 
+        emissive="#C5A059" 
+        emissiveIntensity={0.8} 
+        transparent 
+        opacity={0.4} 
+        wireframe 
+      />
     </Torus>
   );
 }

@@ -13,7 +13,8 @@ import { ArticleGenerator } from './components/ArticleGenerator';
 import { GeneratedArticle } from './components/GeneratedArticle';
 import { ArticleData, Language } from './types';
 import { generateArticleFromSummary } from './services/geminiService';
-import { Loader2 } from 'lucide-react';
+import { fetchLatestPapers, PaperMetadata } from './services/paperService';
+import { Loader2, Heart, Bookmark, ExternalLink } from 'lucide-react';
 
 const TRANSLATIONS = {
   en: {
@@ -27,9 +28,13 @@ const TRANSLATIONS = {
     explore: 'Explore Examples',
     featured: 'Featured Narratives',
     featuredDesc: 'Discover how complex research is transformed into engaging visual stories.',
+    favorites: 'My Favorites',
+    favoritesDesc: 'Your saved research papers and narratives.',
+    noFavorites: 'No favorites yet',
     yourResearch: 'Your Research Here',
     uploadDesc: 'Upload your article to generate a custom narrative experience.',
     uploadNow: 'Upload Now',
+    originalPublication: 'Original Source',
     viewNarrative: 'View Narrative',
     storytelling: 'Storytelling',
     scienceOf: 'The Science of',
@@ -53,39 +58,43 @@ const TRANSLATIONS = {
     ]
   },
   zh: {
-    engine: '简报',
-    create: '创建叙事',
-    platform: '科研可视化平台',
-    heroTitle1: '将论文转化为',
-    heroTitle2: '生动的叙事',
-    heroDesc: '上传您的研究文章，让人工智能打造优雅、互动的体验，让您的科学研究焕发生机。',
+    engine: '科学叙事',
+    create: '生成叙事',
+    platform: '科研可视化交互平台',
+    heroTitle1: '赋予科研论文以生命',
+    heroTitle2: '从枯燥文字到生动叙事',
+    heroDesc: '上传您的研究论文，由 AI 打造优雅的交互式体验，让您的科研成果跃然纸上。',
     getStarted: '立即开始',
     explore: '探索案例',
-    featured: '精选叙事',
-    featuredDesc: '探索复杂的研究如何转化为引人入胜的视觉故事。',
-    yourResearch: '您的研究在此',
-    uploadDesc: '上传您的文章以生成定制的叙事体验。',
+    featured: '前沿动态',
+    featuredDesc: '探索复杂的研究成果如何转化为引人入胜的视觉叙事。',
+    favorites: '我的收藏',
+    favoritesDesc: '您保存的研究论文和叙事。',
+    noFavorites: '暂无收藏',
+    yourResearch: '开启您的研究叙事',
+    uploadDesc: '上传您的论文，生成专属的交互式叙事体验。',
     uploadNow: '立即上传',
+    originalPublication: '查看原文',
     viewNarrative: '查看叙事',
-    storytelling: '叙事艺术',
-    scienceOf: '科学的',
-    step1Title: '上下文分析',
-    step1Desc: 'Gemini 分析您的论文，识别核心主题、方法论和关键结果。',
-    step2Title: '视觉映射',
-    step2Desc: '引擎自动建议最佳的交互式图表来表示复杂的数据。',
-    step3Title: '优雅呈现',
-    step3Desc: '生成定制的高端编辑网站，随时可以与世界分享。',
+    storytelling: '叙事的艺术',
+    scienceOf: '科学与',
+    step1Title: '深度语境分析',
+    step1Desc: 'Gemini 深度解析您的论文，精准识别核心主题、研究方法及关键结论。',
+    step2Title: '智能视觉映射',
+    step2Desc: '系统自动匹配最佳交互图表，直观呈现复杂的数据逻辑与研究模型。',
+    step3Title: '全景交互呈现',
+    step3Desc: '生成定制化的高端学术展示网站，让您的研究成果以最优雅的方式与世界共享。',
     rights: '版权所有。',
     chemistry: '化学',
-    material: '材料',
-    biology: '生物',
+    material: '材料科学',
+    biology: '生物科学',
     ai: '人工智能',
     weavingSteps: [
-      '正在分析研究摘要...',
-      '正在识别关键方法论...',
-      '正在综合结果与数据...',
-      '正在映射交互式可视化...',
-      '正在渲染编辑布局...'
+      '正在深度解析研究摘要...',
+      '正在精准识别关键方法论...',
+      '正在综合实验结果与数据...',
+      '正在智能映射交互式可视化...',
+      '正在渲染全景编辑布局...'
     ]
   }
 };
@@ -255,13 +264,79 @@ const App: React.FC = () => {
   const [isGeneratingFeatured, setIsGeneratingFeatured] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [featuredPapers, setFeaturedPapers] = useState<Record<string, any[]>>(FEATURED_PAPERS);
+  const [isFetchingPapers, setIsFetchingPapers] = useState(false);
+  const [favorites, setFavorites] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('paper_favorites');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [showFavorites, setShowFavorites] = useState(false);
 
   const t = TRANSLATIONS[language];
+
+  useEffect(() => {
+    localStorage.setItem('paper_favorites', JSON.stringify(favorites));
+  }, [favorites]);
+
+  useEffect(() => {
+    const loadLatestPapers = async () => {
+      setIsFetchingPapers(true);
+      const sectors = ['ai', 'biology', 'chemistry', 'material'];
+      const newFeatured = { ...FEATURED_PAPERS };
+
+      try {
+        for (const sector of sectors) {
+          const latest = await fetchLatestPapers(sector as any);
+          if (latest.length > 0) {
+            // Exactly two articles per section
+            if (sector === 'ai') {
+              // Priority for the curated AlphaQubit paper + 1 fresh result
+              newFeatured[sector] = [FEATURED_PAPERS.ai[0], latest[0]];
+            } else {
+              newFeatured[sector] = latest.slice(0, 2);
+            }
+          }
+          // Add delay between sectors
+          await new Promise(resolve => setTimeout(resolve, 3000));
+        }
+
+        setFeaturedPapers(newFeatured);
+      } catch (error) {
+        console.error("Error loading latest papers:", error);
+      } finally {
+        setIsFetchingPapers(false);
+      }
+    };
+
+    loadLatestPapers();
+  }, []);
 
   const handleArticleGenerated = (data: ArticleData) => {
     setCurrentArticle(data);
     setShowGenerator(false);
+    setShowFavorites(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const toggleFavorite = (e: React.MouseEvent, paper: any) => {
+    e.stopPropagation();
+    const isFav = favorites.some(f => f.paperId === paper.id);
+    if (isFav) {
+      setFavorites(prev => prev.filter(f => f.paperId !== paper.id));
+    } else {
+      setFavorites(prev => [{
+        paperId: paper.id,
+        title: paper.title,
+        date: paper.date,
+        tag: paper.tag,
+        desc: paper.desc,
+        sourceUrl: paper.sourceUrl || ''
+      }, ...prev]);
+    }
   };
 
   const handleFeaturedClick = async (paper: any) => {
@@ -342,6 +417,14 @@ const App: React.FC = () => {
             </div>
 
             <button 
+              onClick={() => setShowFavorites(!showFavorites)}
+              className={`p-2 rounded-full transition-all ${showFavorites ? 'bg-nobel-gold text-white' : 'bg-stone-100 text-stone-400 hover:text-stone-900'}`}
+              title={t.favorites}
+            >
+              <Bookmark size={20} />
+            </button>
+
+            <button 
               onClick={() => setShowGenerator(true)}
               className="flex items-center gap-2 px-6 py-2.5 bg-stone-900 text-white rounded-full hover:bg-stone-800 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 font-bold text-sm tracking-widest uppercase"
             >
@@ -399,28 +482,32 @@ const App: React.FC = () => {
       </header>
 
       <main className="container mx-auto px-6 pb-32">
-        {/* Examples Section */}
-        <section id="examples" className="pt-20">
-          <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
-            <div>
-              <h2 className="font-serif text-4xl text-stone-900 mb-4">{t.featured}</h2>
-              <p className="text-stone-500 max-w-md">{t.featuredDesc}</p>
-            </div>
-            <div className="h-px flex-1 bg-stone-100 mx-8 hidden md:block"></div>
-          </div>
-
-          <div className="space-y-20">
-            {(Object.keys(FEATURED_PAPERS) as Array<keyof typeof FEATURED_PAPERS>).map((sector) => (
-              <div key={sector} className="space-y-8">
-                <div className="flex items-center gap-4">
-                  <h3 className="text-sm font-bold uppercase tracking-[0.3em] text-nobel-gold whitespace-nowrap">
-                    {t[sector]}
-                  </h3>
-                  <div className="h-px w-full bg-stone-100"></div>
+        
+        {/* Favorites Section */}
+        <AnimatePresence>
+          {showFavorites && (
+            <motion.section 
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="pt-20 overflow-hidden"
+            >
+              <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
+                <div>
+                  <h2 className="font-serif text-5xl text-stone-900 mb-4">{t.favorites}</h2>
+                  <p className="text-stone-500 max-w-md">{t.favoritesDesc}</p>
                 </div>
-                
+                <div className="h-px flex-1 bg-stone-100 mx-8 hidden md:block"></div>
+              </div>
+
+              {favorites.length === 0 ? (
+                <div className="py-20 text-center bg-white rounded-3xl border border-dashed border-stone-200">
+                  <Bookmark className="mx-auto text-stone-200 mb-4" size={48} />
+                  <p className="text-stone-400 font-serif text-xl">{t.noFavorites}</p>
+                </div>
+              ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {FEATURED_PAPERS[sector].map((paper) => (
+                  {favorites.map((paper) => (
                     <motion.div 
                       key={paper.id}
                       whileHover={{ y: -10 }}
@@ -432,13 +519,21 @@ const App: React.FC = () => {
                           <HeroScene />
                         </div>
                         <div className="absolute inset-0 bg-gradient-to-t from-stone-900 via-transparent to-transparent"></div>
+                        <div className="absolute top-4 right-4 z-10">
+                          <button 
+                            onClick={(e) => toggleFavorite(e, paper)}
+                            className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center text-white hover:bg-nobel-gold transition-all"
+                          >
+                            <Heart size={18} fill="currentColor" className="text-nobel-gold" />
+                          </button>
+                        </div>
                         <div className="absolute bottom-6 left-6 right-6">
                           <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-nobel-gold mb-2">{paper.tag[language]}</div>
-                          <h3 className="font-serif text-2xl text-white">{paper.title}</h3>
+                          <h3 className="font-serif text-2xl text-white line-clamp-2">{paper.title}</h3>
                         </div>
                       </div>
                       <div className="p-6">
-                        <p className="text-stone-600 text-sm leading-relaxed mb-6">
+                        <p className="text-stone-600 text-sm leading-relaxed mb-6 line-clamp-3">
                           {paper.desc[language]}
                         </p>
                         <div className="flex items-center justify-between">
@@ -450,6 +545,94 @@ const App: React.FC = () => {
                       </div>
                     </motion.div>
                   ))}
+                </div>
+              )}
+              <div className="mt-20 h-px w-full bg-stone-200"></div>
+            </motion.section>
+          )}
+        </AnimatePresence>
+
+        {/* Examples Section */}
+        <section id="examples" className="pt-20">
+          <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
+            <div>
+              <h2 className="font-serif text-5xl text-stone-900 mb-4">{t.featured}</h2>
+              <p className="text-stone-500 max-w-md">{t.featuredDesc}</p>
+            </div>
+            <div className="h-px flex-1 bg-stone-100 mx-8 hidden md:block"></div>
+          </div>
+
+          <div className="space-y-20">
+            {(Object.keys(featuredPapers) as Array<keyof typeof featuredPapers>).map((sector) => (
+              <div key={sector} className="space-y-8">
+                <div className="flex items-center gap-4">
+                  <h3 className="text-4xl font-bold uppercase tracking-[0.4em] text-nobel-gold whitespace-nowrap">
+                    {t[sector]}
+                  </h3>
+                  <div className="h-px w-full bg-stone-100"></div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {isFetchingPapers && featuredPapers[sector].length === 0 ? (
+                    // Skeleton loaders
+                    [1, 2, 3].map((i) => (
+                      <div key={i} className="bg-white rounded-2xl h-[400px] border border-stone-100 animate-pulse" />
+                    ))
+                  ) : (
+                    featuredPapers[sector].map((paper) => (
+                      <motion.div 
+                        key={paper.id}
+                        whileHover={{ y: -10 }}
+                        className="group cursor-pointer bg-white rounded-2xl overflow-hidden border border-stone-200 shadow-sm hover:shadow-2xl transition-all duration-500"
+                        onClick={() => handleFeaturedClick(paper)}
+                      >
+                        <div className="aspect-[4/3] bg-stone-900 relative overflow-hidden">
+                          <div className="absolute inset-0 opacity-40 group-hover:opacity-60 transition-opacity">
+                            <HeroScene />
+                          </div>
+                          <div className="absolute inset-0 bg-gradient-to-t from-stone-900 via-transparent to-transparent"></div>
+                          <div className="absolute top-4 right-4 z-10">
+                            <button 
+                              onClick={(e) => toggleFavorite(e, paper)}
+                              className={`w-10 h-10 rounded-full backdrop-blur-md flex items-center justify-center transition-all ${
+                                favorites.some(f => f.paperId === paper.id) 
+                                ? 'bg-nobel-gold text-white' 
+                                : 'bg-white/10 text-white hover:bg-white/20'
+                              }`}
+                            >
+                              <Heart size={18} fill={favorites.some(f => f.paperId === paper.id) ? "currentColor" : "none"} />
+                            </button>
+                          </div>
+                          <div className="absolute bottom-6 left-6 right-6">
+                            <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-nobel-gold mb-2">{paper.tag[language]}</div>
+                            <h3 className="font-serif text-2xl text-white line-clamp-2">{paper.title}</h3>
+                          </div>
+                        </div>
+                        <div className="p-6">
+                          <p className="text-stone-600 text-sm leading-relaxed mb-6 line-clamp-3">
+                            {paper.desc[language]}
+                          </p>
+                          <div className="flex items-center justify-between">
+                            <div className="flex flex-col gap-1">
+                              <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">{paper.date}</span>
+                              <a 
+                                href={paper.sourceUrl} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-[10px] font-bold text-nobel-gold uppercase tracking-widest flex items-center gap-1 hover:underline"
+                              >
+                                {t.originalPublication} <ExternalLink size={10} />
+                              </a>
+                            </div>
+                            <span className="text-nobel-gold font-bold text-xs uppercase tracking-widest group-hover:translate-x-1 transition-transform flex items-center gap-1">
+                              {t.viewNarrative} →
+                            </span>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))
+                  )}
                 </div>
               </div>
             ))}

@@ -183,20 +183,20 @@ export const TransformerDecoderDiagram: React.FC = () => {
 
 export const GenericChartDiagram = ({ data }: { data: any }) => {
   return (
-    <div className="w-full h-64 flex flex-col items-center justify-center bg-white/5 rounded-xl border border-white/10 p-6">
-      <h4 className="text-sm font-bold uppercase tracking-widest text-stone-400 mb-4">{data?.title || 'Data Visualization'}</h4>
-      <div className="flex items-end gap-2 h-32 w-full max-w-xs">
+    <div className="w-full h-64 flex flex-col items-center justify-center bg-[#1c1917] rounded-xl border border-stone-800 p-6 shadow-inner">
+      <h4 className="text-sm font-bold uppercase tracking-widest text-stone-500 mb-4">{data?.title || 'Data Visualization'}</h4>
+      <div className="flex items-end gap-3 h-32 w-full max-w-xs px-4">
         {(data?.points || [40, 70, 55, 90, 65]).map((val: number, i: number) => (
           <motion.div
             key={i}
             initial={{ height: 0 }}
             animate={{ height: `${val}%` }}
-            transition={{ delay: i * 0.1, duration: 0.8 }}
-            className="flex-1 bg-nobel-gold/60 rounded-t-sm hover:bg-nobel-gold transition-colors"
+            transition={{ delay: i * 0.1, duration: 1, ease: "circOut" }}
+            className="flex-1 bg-gradient-to-t from-nobel-gold/40 to-nobel-gold rounded-t-md hover:brightness-125 transition-all shadow-[0_0_15px_rgba(197,160,89,0.2)]"
           />
         ))}
       </div>
-      <div className="mt-4 flex justify-between w-full max-w-xs text-[10px] text-stone-500 font-mono">
+      <div className="mt-6 flex justify-between w-full max-w-xs text-[10px] text-stone-600 font-mono tracking-tighter">
         {(data?.labels || ['A', 'B', 'C', 'D', 'E']).map((label: string, i: number) => (
           <span key={i}>{label}</span>
         ))}
