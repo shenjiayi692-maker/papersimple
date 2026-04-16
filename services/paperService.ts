@@ -1,7 +1,4 @@
 import { Language } from '../types';
-import { GoogleGenAI } from "@google/genai";
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 export interface PaperMetadata {
   id: string;
@@ -74,20 +71,22 @@ async function translateSummaries(texts: string[]): Promise<string[]> {
 
   if (toTranslateTexts.length === 0) return results;
 
-  const maxRetries = 1; // Reduced from 2 to be less aggressive
-  let retryCount = 0;
-
   const attemptTranslation = async (): Promise<boolean> => {
     try {
-      const result = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: `Translate the following ${toTranslateTexts.length} scientific abstracts into professional, native-sounding Chinese. 
-        Return ONLY a JSON array of strings. Concise (under 50 words).
-        
-        Abstracts:
-        ${toTranslateTexts.map((t, i) => `[${i}]: ${t}`).join('\n\n')}`
+      const response = await fetch("/api/gemini/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ texts: toTranslateTexts })
       });
 
+      if (!response.ok) {
+        if (response.status === 429) {
+          globalRateLimitCoolDownUntil = Date.now() + 10 * 60 * 1000;
+        }
+        return false;
+      }
+
+      const result = await response.json();
       const responseText = result.text || "[]";
       const jsonMatch = responseText.match(/\[.*\]/s);
       const translatedArray = JSON.parse(jsonMatch ? jsonMatch[0] : responseText);
@@ -102,19 +101,7 @@ async function translateSummaries(texts: string[]): Promise<string[]> {
       }
       return false;
     } catch (error: any) {
-      if (error.message?.includes('429') || error.status === 429) {
-        // Set a global cool down for 10 minutes if we hit a 429
-        globalRateLimitCoolDownUntil = Date.now() + 10 * 60 * 1000;
-        console.error("429 Quota Exceeded. Entering 10-minute global cool-down.");
-        
-        if (retryCount < maxRetries) {
-          retryCount++;
-          const waitTime = 5000;
-          await new Promise(resolve => setTimeout(resolve, waitTime));
-          return await attemptTranslation();
-        }
-      }
-      console.error("Batch translation error:", error);
+      console.error("Batch translation proxy error:", error);
       return false;
     }
   };

@@ -4,16 +4,68 @@ import cors from "cors";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
+import { GoogleGenAI, Type } from "@google/genai";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 async function startServer() {
   const app = express();
   const PORT = 3000;
 
   app.use(cors());
-  app.use(express.json());
+  app.use(express.json({ limit: '1mb' }));
+
+  // Gemini Narrative Generation Proxy
+  app.post("/api/gemini/generate", async (req, res) => {
+    const { prompt, schema } = req.body;
+    if (!prompt) return res.status(400).json({ error: "Prompt is required" });
+
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: schema,
+        },
+      });
+
+      res.json({ text: response.text });
+    } catch (error: any) {
+      console.error("Gemini Generation Error:", error);
+      res.status(500).json({ error: error.message || "Failed to generate content" });
+    }
+  });
+
+  // Gemini Translation Proxy
+  app.post("/api/gemini/translate", async (req, res) => {
+    const { texts } = req.body;
+    if (!texts || !Array.isArray(texts)) return res.status(400).json({ error: "Texts array is required" });
+
+    try {
+      const prompt = `Translate the following ${texts.length} scientific abstracts into professional, native-sounding Chinese. 
+      Return ONLY a JSON array of strings. Concise (under 50 words).
+      
+      Abstracts:
+      ${texts.map((t, i) => `[${i}]: ${t}`).join('\n\n')}`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+        },
+      });
+
+      res.json({ text: response.text });
+    } catch (error: any) {
+      console.error("Gemini Translation Error:", error);
+      res.status(500).json({ error: error.message || "Failed to translate" });
+    }
+  });
 
   // API Proxy for arXiv to bypass CORS
   app.get("/api/papers", async (req, res) => {
