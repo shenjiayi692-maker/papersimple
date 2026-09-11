@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-labelledby="title desc">
+  <title id="title">PaperSimple</title>
+  <desc id="desc">A dense research paper unfolds into an editorial narrative with diagrams, metrics, and interactive structure.</desc>
+  <rect width="1200" height="420" rx="20" fill="#111116"/>
+  <g transform="translate(650 33)">
+    <path d="M76 9 H353 L435 91 V346 H76Z" fill="#f4f0e8"/>
+    <path d="M353 9 V91 H435" fill="#d8d2c6"/>
+    <text x="110" y="62" fill="#24232b" font-family="Georgia,serif" font-size="24" font-weight="700">A RESEARCH PAPER</text>
+    <g fill="#bcb6ac"><rect x="110" y="88" width="226" height="8"/><rect x="110" y="108" width="278" height="8"/><rect x="110" y="128" width="256" height="8"/><rect x="110" y="166" width="106" height="112"/><rect x="234" y="166" width="154" height="8"/><rect x="234" y="188" width="138" height="8"/><rect x="234" y="210" width="166" height="8"/><rect x="234" y="232" width="130" height="8"/></g>
+    <path d="M0 175 H52" stroke="#65e3ff" stroke-width="4"/><path d="M42 164 L56 175 L42 186" fill="none" stroke="#65e3ff" stroke-width="4"/>
+    <g transform="translate(412 113)">
+      <circle cx="75" cy="75" r="74" fill="#3023a8" opacity=".55"/>
+      <circle cx="75" cy="75" r="48" fill="none" stroke="#65e3ff" stroke-width="2"/>
+      <circle cx="75" cy="75" r="13" fill="#ffdf78"/>
+      <circle cx="28" cy="63" r="8" fill="#65e3ff"/><circle cx="119" cy="38" r="8" fill="#ff6fae"/><circle cx="98" cy="122" r="8" fill="#65e3ff"/>
+      <path d="M28 63 Q75 20 119 38 Q142 82 98 122 Q51 138 28 63Z" fill="none" stroke="#c2baff" stroke-width="3"/>
+    </g>
+  </g>
+  <g font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+    <text x="62" y="73" fill="#65e3ff" font-size="18" font-weight="800" letter-spacing="3">RESEARCH VISUALIZATION PLATFORM</text>
+    <text x="62" y="155" fill="#faf7f1" font-size="76" font-weight="810">PaperSimple</text>
+    <text x="62" y="210" fill="#c7c4ce" font-size="25">Transform papers into narratives.</text>
+    <g transform="translate(62 270)">
+      <text fill="#ffdf78" font-size="18" font-weight="750">ANALYZE</text><text x="126" fill="#6f6d78" font-size="18">→</text>
+      <text x="165" fill="#65e3ff" font-size="18" font-weight="750">MAP</text><text x="240" fill="#6f6d78" font-size="18">→</text>
+      <text x="279" fill="#ff6fae" font-size="18" font-weight="750">RENDER</text>
+      <text y="54" fill="#8e8b97" font-size="18">PDF · DOCX · arXiv · bilingual · 3D</text>
+    </g>
+  </g>
+</svg>
