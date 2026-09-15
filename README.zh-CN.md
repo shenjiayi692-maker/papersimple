@@ -8,7 +8,15 @@
 
 <p align="center"><a href="./README.md">English</a> · <strong>中文</strong></p>
 
-PaperSimple 把一篇研究论文变成可探索的编辑式叙事。上传 PDF、DOCX、Markdown 或纯文本文件，或者给一个公开 URL，应用会抽取原文、识别其中的核心观点，并把适合可视化的概念映射成交互式图解。
+读一篇领域外的论文，要先花两小时才知道它跟你有没有关系。PaperSimple 把它变成十分钟能扫完的可视化叙事。
+
+```bash
+git clone https://github.com/shenjiayi692-maker/papersimple && cd papersimple && cp .env.example .env && npm i && npm run dev
+```
+
+内置的 AlphaQubit 叙事不需要 key 就能完整渲染，可以立刻看到产出长什么样；要生成你自己的则需要 Gemini API key。
+
+上传 PDF、DOCX、Markdown 或纯文本文件，或者给一个公开 URL，应用会抽取原文、识别其中的核心观点，并把适合可视化的概念映射成交互式图解。
 
 ## 从密集的论文到有引导的叙事
 
