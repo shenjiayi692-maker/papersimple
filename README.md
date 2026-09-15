@@ -77,3 +77,7 @@ npm run build
 - [`components/QuantumScene.tsx`](./components/QuantumScene.tsx) — 3D hero and quantum scenes
 - [`services/geminiService.ts`](./services/geminiService.ts) — structured generation
 - [`services/paperService.ts`](./services/paperService.ts) — arXiv discovery and local translation cache
+
+## License
+
+MIT—see [LICENSE](./LICENSE).

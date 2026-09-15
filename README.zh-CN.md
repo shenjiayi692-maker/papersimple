@@ -77,3 +77,7 @@ npm run build
 - [`components/QuantumScene.tsx`](./components/QuantumScene.tsx) — 3D 主视觉与量子场景
 - [`services/geminiService.ts`](./services/geminiService.ts) — 结构化生成
 - [`services/paperService.ts`](./services/paperService.ts) — arXiv 发现与本地翻译缓存
+
+## 许可
+
+MIT,见 [LICENSE](./LICENSE)。
