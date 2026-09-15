@@ -6,7 +6,17 @@
   <a href="https://ai.studio/apps/fcd7f267-d84f-4c89-bcc5-0cbccc10ce51"><strong>Open in Google AI Studio</strong></a>
 </p>
 
-PaperSimple transforms a research paper into an explorable editorial narrative. Upload a PDF, DOCX, Markdown, or text file—or provide a public URL—and the app extracts the source, identifies its central ideas, and maps suitable concepts to interactive diagrams.
+<p align="center"><strong>English</strong> · <a href="./README.zh-CN.md">中文</a></p>
+
+Reading a paper outside your field costs two hours before you even know whether it mattered. PaperSimple turns one into a visual narrative you can skim in ten minutes.
+
+```bash
+git clone https://github.com/shenjiayi692-maker/papersimple && cd papersimple && cp .env.example .env && npm i && npm run dev
+```
+
+The built-in AlphaQubit narrative is fully rendered without a key, so you can see the output immediately; generating your own needs a Gemini API key.
+
+Upload a PDF, DOCX, Markdown, or text file—or provide a public URL—and the app extracts the source, identifies its central ideas, and maps suitable concepts to interactive diagrams.
 
 ## From dense paper to guided story
 
